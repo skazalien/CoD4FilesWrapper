@@ -48,6 +48,7 @@ std::map<std::string, std::vector<std::string>> duplicateTextureMaterialsArray;
 std::map<std::string, bool> stockTexturesMap;
 std::map<std::string, bool> stockSourceDataFilesMap;
 std::map<std::string, bool> xmodelStockPathFilesMap;
+std::map<std::string, bool> fxFilesMap;
 
 std::vector<std::string> errLog;
 
@@ -70,6 +71,9 @@ std::vector<std::string> allExtensions = { ".jpg", ".dds", ".tga", ".jpeg" };
 std::map<std::string, bool> allTextureAndGdtFilePaths;
 
 std::map <std::string, int> _CSVprepareSwitchCase{ {"fx", 1}, {"rawfile", 2} };
+
+//1 == StockTextures, 2 == stockSourceFiles, 3 == xmodelStockFiles,, 4 == fxFiles
+std::map<std::string, int> startFilesMap{ {"--iwi--", 1}, {"--gdt--", 2}, {"--xmodel--", 3}, {"--fx--", 4} };
 
 
 ///////// Global Variables /> /////////
@@ -365,7 +369,7 @@ void readCSV(std::filesystem::path csvPath) {
             std::regex_search(line, matchResults, modelRegex);
             switch (_CSVprepareSwitchCase[matchResults.str(1)]) {
             case 1:
-                if (std::filesystem::exists(cod4RootDirectory + "raw/fx/" + matchResults.str(2) + ".efx")) {
+                if (std::filesystem::exists(cod4RootDirectory + "raw/fx/" + matchResults.str(2) + ".efx") && !fxFilesMap.contains(matchResults.str(2) + ".efx")) {
                     allTextureAndGdtFilePaths[cod4RootDirectory + "raw/fx/" + matchResults.str(2) + ".efx"];
                 }
                 break;
@@ -384,17 +388,27 @@ void readCSV(std::filesystem::path csvPath) {
 
 
 
-//1 == StockTextures, 2 == stockSourceFiles, 3 == xmodelStockFiles
-bool readTxtFile(std::filesystem::path txtPath, int fileType) {
+//1 == StockTextures, 2 == stockSourceFiles, 3 == xmodelStockFiles, 4 == fxFiles
+bool readTxtFile(std::filesystem::path txtPath) {
     std::ifstream file(txtPath);
     std::cout << "Reading " << txtPath.string();
     if (!std::filesystem::exists(txtPath)) {
         std::cout << "\n" << txtPath.filename().string() << " doesn't exist!\nGet working version from my GitHub!\nGitHub: https://github.com/skazalien/Cod4FilesWrapper \nExiting program." << std::endl;
         return false;
     }
+    int fileType = 0;
+
     if (file.is_open()) {
         std::string line;
         while (std::getline(file, line)) {
+            if (line == "") continue;
+            for (auto& [k, v] : startFilesMap) {
+                if (line == k) {
+                    fileType = v;
+                    break;
+                }
+                if (line == "--end--") fileType == -1;
+            }
             switch (fileType)
             {
             case 1:
@@ -405,6 +419,9 @@ bool readTxtFile(std::filesystem::path txtPath, int fileType) {
                 break;
             case 3:
                 xmodelStockPathFilesMap[line] = true;
+                break;
+            case 4:
+                fxFilesMap[line] = true;
                 break;
             }
         }
@@ -522,9 +539,7 @@ int main()
     SetConsoleOutputCP(nCodePage);
     SetConsoleCP(nCodePage);
     std::string currentWorkingDirectory = std::filesystem::current_path().string();
-    std::filesystem::path sourceDataStockTxtPath(currentWorkingDirectory + "/sourcedatafiles.txt");
-    std::filesystem::path txtPath(currentWorkingDirectory + "/iwifilesall.txt");
-    std::filesystem::path xmodelStockPath(currentWorkingDirectory + "/xmodelfiles.txt");
+    std::filesystem::path stockFiles(currentWorkingDirectory + "/stockFiles.txt");
     //std::string mapfilePath = "D:/G/Call of Duty 4/map_source/mp_stalker_v2.map";
 
 
@@ -598,19 +613,18 @@ int main()
 
     std::cout << "Your Cod4 Directory: " << cod4RootDirectory << std::endl;
     std::string sourceDataPath = cod4RootDirectory + "source_data";
-    //1 == StockTextures, 2 == stockSourceFiles, 3 == xmodelStockFiles
-    std::map<std::filesystem::path, int> startFilesMap{ {txtPath.make_preferred(), 1}, {sourceDataStockTxtPath.make_preferred(), 2}, {xmodelStockPath.make_preferred(), 3} };
-    for (auto& [k, v] : startFilesMap) {
-        if (!readTxtFile(k, v)) {
-            std::cout << "\nType 1, then Enter to open GitHub Repository,\nElse Exit:\n";
-            std::string endString;
-            std::getline(std::cin, endString);
-            if (endString == "1") {
-                ShellExecute(NULL, NULL, "https://github.com/skazalien/Cod4FilesWrapper", NULL, NULL, SW_SHOWNORMAL);
-            }
-            return EXIT_FAILURE;
+
+
+    if (!readTxtFile(stockFiles)) {
+        std::cout << "\nType 1, then Enter to open GitHub Repository,\nElse Exit:\n";
+        std::string endString;
+        std::getline(std::cin, endString);
+        if (endString == "1") {
+            ShellExecute(NULL, NULL, "https://github.com/skazalien/Cod4FilesWrapper", NULL, NULL, SW_SHOWNORMAL);
         }
+        return EXIT_FAILURE;
     }
+
 
 
     std::vector<std::string> allGdtFiles;
