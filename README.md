@@ -13,6 +13,7 @@ The tool is meant to be really simplified, not *GUI* dependant.
 - *.csv*
 - *.iwi*
 - *.gsc*
+- *.sun*
 - *prefab*
 - *images*
 - *materials*
@@ -38,7 +39,6 @@ And thats it, your map copy is done!
 - [ ] Add stock fx check
 - [ ] .csv materials, xmodel support[^1]
 - [ ] Update code itself[^2]
-- [ ] .sun files check
 
 [^1]: I'll look into it, if it's requested. I left it out, as it's a major concern for CodJumper maps as not to exceed engine limits on some maps.
 [^2]: Figured out a better way to collect all files, making it a lot quicker and more reliable.
