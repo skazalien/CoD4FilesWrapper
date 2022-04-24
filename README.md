@@ -25,7 +25,7 @@ The wrapped map folder contains the optional ___YourMapName___**_TEXTURES** subf
 
 ## How To Use
 
-Just place it anywhere you'd like, with all the files it comes with (iwifilesall.txt, sourcedatafiles.txt, xmodelfiles.txt), preferably in it's own folder.
+Just place it anywhere you'd like, with all the files it comes with[^1], preferably in it's own folder.
 Run the .exe, and type in your main .map file Path. If this .map file isn't situated in your CoD4 Directory 'map_source' subfolder, you'll have to define your own CoD4 Directory as well.
 
 And thats it, your map copy is done!
@@ -36,10 +36,11 @@ And thats it, your map copy is done!
 
 
 ### TODO:
-- [ ] .csv materials, xmodel support[^1]
-- [ ] Update code itself[^2]
-- [ ] Adding more Optional Files[^3]
+- [ ] .csv materials, xmodel support[^2]
+- [ ] Update code itself[^3]
+- [ ] Adding more Optional Files[^4]
 
-[^1]: I'll look into it, if it's requested. I left it out, as it's a major concern for CodJumper maps as not to exceed engine limits on some maps.
-[^2]: There are some unique cases that currently I'm trying to find a solution for, such as levels.gdt or reflections.csv.
-[^3]: These are files that'd most likely would overwrite other's particular file(s).
+[^1]: stockFiles.txt
+[^2]: I'll look into it, if it's requested. I left it out, as it's a major concern for CodJumper maps as not to exceed engine limits on some maps.
+[^3]: There are some unique cases that currently I'm trying to find a solution for, such as levels.gdt or reflections.csv.
+[^4]: These are files that'd most likely would overwrite other's particular file(s).
