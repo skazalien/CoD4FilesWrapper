@@ -1,6 +1,6 @@
 # *Cod4FilesWrapper*
 
-This **.exe** file copies all map-related files to your CoD4 Directory **'z_wrapped_maps'** folder, so that it can be quickly pushed to your own Map Repository, or just to have a quick backup in general that you can upload anywhere you'd like. You can also share the map easily with someone else, without going through the process of manually selecting and copying all individual files.
+This **.exe** file copies all map-related files to your CoD4 Directory **'z_wrapped_maps'** folder, so that it can be quickly pushed to your own Map Repository, or just to have a quick backup in general that you can upload anywhere you'd like. You can also share the map easily with someone else, without going through the process of manually selecting and copying all individual files and compiling .gdt's in AssetManager.
 
 This tool is mostly made for ***CodJumper***, so if you happen to notice any filetype that isn't wrapped, please let me know on my discord, so that I can look into it:
 ***skazy#2211***
@@ -36,9 +36,10 @@ And thats it, your map copy is done!
 
 
 ### TODO:
-- [ ] Add stock fx check
 - [ ] .csv materials, xmodel support[^1]
 - [ ] Update code itself[^2]
+- [ ] Adding more Optional Files[^3]
 
 [^1]: I'll look into it, if it's requested. I left it out, as it's a major concern for CodJumper maps as not to exceed engine limits on some maps.
-[^2]: Figured out a better way to collect all files, making it a lot quicker and more reliable.
+[^2]: There are some unique cases that currently I'm trying to find a solution for, such as levels.gdt or reflections.csv.
+[^3]: These are files that'd most likely would overwrite other's particular file(s).
