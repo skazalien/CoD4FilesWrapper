@@ -58,32 +58,142 @@ std::vector<std::string> errLog;
 std::vector<std::string> customTextures;
 std::map<std::string, bool> customTexturesMap;
 
-std::map<std::string, std::map<std::string, std::string>> specialCustomTexturesMap;
+std::map<std::filesystem::path, std::map<std::string, std::filesystem::path>> specialCustomTexturesMap;
 
 std::string cod4RootDirectory;
 int cod4RootDirectoryLength;
-std::map<std::string, std::string> colSpecNormMap;
+std::map<std::string, std::map<std::string, std::filesystem::path>> colSpecNormMap;
 
 std::filesystem::path mapFile;
 
-std::map<std::string, std::map<std::filesystem::path, std::string>> textureFilePath;
+std::map<std::filesystem::path, std::map<std::filesystem::path, std::string>> textureFilePath;
 
 std::vector<std::filesystem::path> gdtFilePath;
 
 std::vector<std::string> allExtensions = { ".jpg", ".dds", ".tga", ".jpeg" };
 
-std::map<std::string, bool> allTextureAndGdtFilePaths;
-
-std::map <std::string, int> _CSVprepareSwitchCase{ {"fx", 1}, {"rawfile", 2} };
+std::map <std::string, int> _CSVprepareSwitchCase{ {"fx", 1}, {"rawfile", 2}, {"material", 3}, {"xmodel", 4}};
 
 //1 == StockTextures, 2 == stockSourceFiles, 3 == xmodelStockFiles,, 4 == fxFiles
 std::map<std::string, int> startFilesMap{ {"--iwi--", 1}, {"--gdt--", 2}, {"--xmodel--", 3}, {"--fx--", 4} };
+std::vector<std::string> specularTexturesArray;
+std::map<std::string, int> materialMapTypes{ {"colorMap",1},{"detailMap",2},{"normalMap",3},{"specularMap",4} };
+std::map<std::string, std::string> textureMapTypeMap;
+std::vector<std::string> textureMapTypeFileArray;
+
+std::map<std::string, bool> xmodelPartsMap{ {"raw/xmodelsurfs/", true}, {"raw/xmodel/", false}, {"raw/xmodelparts/", true},
+    {"assettgtcache/raw/raw/xmodel/", false}, {"assettgtcache/raw/raw/xmodelparts/", true}, {"assettgtcache/raw/raw/xmodelsurfs/", true} };
+
+std::map < int, int > includeCharactersFromTo{ {32,57}, {65,90}, {95,122}, {126,126}};
+std::vector<int> includeCharactersArray;
+
+std::map <std::string, std::string> textureMapTypeFromMaterialMap;
+
+//////////////////////////////////////////////////
+//          All Files Global Vars               //
+//////////////////////////////////////////////////
+std::map<std::string, bool> allMapFiles;        //
+std::map<std::string, bool> allCSVFiles;        //
+std::map<std::string, bool> allFXFiles;         //
+std::map<std::string, bool> allGDTFiles;        //
+std::map<std::string, bool> allMaterialFiles;   //
+std::map<std::string, bool> allGscFiles;        //
+std::map<std::string, bool> allExtraFiles;      //
+int allTextureAndGdtFilePathsMaxLength;         //
+//////////////////////////////////////////////////
+
+//////////////////////////////////////////////////
+//          All Optional Global Vars            //
+//////////////////////////////////////////////////
+std::map<std::string, bool> imageFiles;         //
+std::map<std::string, bool> materialFiles;      //
+std::map<std::string, bool> materialPropsFiles; //
+std::map<std::string, bool> xmodelFiles;        //
+std::map<std::string, bool> iwiFiles;           //
+int optionalFilePathsMaxLength;                 //
+//////////////////////////////////////////////////
+
+
+
 
 
 ///////// Global Variables /> /////////
 
 
 ///////// < Functions/////////
+void assignCharactersArray() {
+    for (auto& [from, to] : includeCharactersFromTo) {
+        for (int i = from; i < to + 1; i++) {
+            includeCharactersArray.push_back(i);
+        }
+    }
+}
+
+bool add2Map(std::map<std::string, bool>& addToMap, std::string& addString, bool addValue = true, bool isOptional = false) {
+    if (!addToMap.contains(addString)) {
+        addToMap[addString] = addValue;
+        if (addString.length() > allTextureAndGdtFilePathsMaxLength && !isOptional)
+            allTextureAndGdtFilePathsMaxLength = addString.length();
+        if (addString.length() > optionalFilePathsMaxLength && isOptional) optionalFilePathsMaxLength = addString.length();
+        return true;
+    }
+    return false;
+}
+
+bool add2AllFiles(std::string addToGlobalMap , std::string addString, bool addValue = true) {
+    std::map<std::string, int> prepare4SwitchCase{ {"map", 1}, {"csv", 2}, {"fx", 3}, {"gdt", 4}, {"material", 5}, {"gsc", 6}, {"extra", 7}};
+    switch (prepare4SwitchCase[addToGlobalMap])
+    {
+    case 1:
+        add2Map(allMapFiles, addString, &addValue);
+        break;
+    case 2:
+        add2Map(allCSVFiles, addString, &addValue);
+        break;
+    case 3:
+        add2Map(allFXFiles, addString, &addValue);
+        break;
+    case 4:
+        add2Map(allGDTFiles, addString, &addValue);
+        break;
+    case 5:
+        add2Map(allMaterialFiles, addString, &addValue);
+        break;
+    case 6:
+        add2Map(allGscFiles, addString, &addValue);
+        break;
+    case 7:
+        add2Map(allExtraFiles, addString, &addValue);
+        break;
+
+    }
+    return false;
+}
+
+
+bool add2OptionalFiles(std::string addToGlobalMap, std::string addString, bool addValue = true) {
+    std::map<std::string, int> prepare4SwitchCase{ {"image", 1}, {"materials", 2},{"material-props", 3}, {"xmodel", 4}, {"iwi-files", 5}};
+    switch (prepare4SwitchCase[addToGlobalMap])
+    {
+    case 1:
+        add2Map(imageFiles, addString, &addValue, true);
+        break;
+    case 2:
+        add2Map(materialFiles, addString, &addValue, true);
+        break;
+    case 3:
+        add2Map(materialPropsFiles, addString, &addValue, true);
+        break;
+    case 4:
+        add2Map(xmodelFiles, addString, &addValue, true);
+        break;
+    case 5:
+        add2Map(iwiFiles, addString, &addValue, true);
+        break;
+    }
+
+    return false;
+}
 
 
 inline void trim(std::string& str)
@@ -108,6 +218,7 @@ namespace String
     {
         return haystack.find(needle) != std::string::npos;
     }
+    //const std::string& value, const std::vector<std::string>& array
     bool in_array(const std::string& value, const std::vector<std::string>& array)
     {
         return std::find(array.begin(), array.end(), value) != array.end();
@@ -120,16 +231,35 @@ namespace String
     }
 
     std::string swiftRegex(std::string examineString, std::string regexString, int resultNumber) {
-        std::regex modelRegex(regexString, std::regex_constants::icase);
         std::smatch matchResults;
-        std::regex_search(examineString, matchResults, modelRegex);
+        try
+        {
+            std::regex modelRegex(regexString, std::regex_constants::icase);
+            std::regex_search(examineString, matchResults, modelRegex);
+        }
+        catch (std::exception& e)
+        {
+            std::cout << "\n" << e.what() << std::endl;
+        }
+       
         return matchResults.str(resultNumber);
+
+
+
     }
     std::string replace(std::string str, std::string substr1, std::string substr2)
     {
         for (size_t index = str.find(substr1, 0); index != std::string::npos && substr1.length(); index = str.find(substr1, index + substr2.length()))
             str.replace(index, substr1.length(), substr2);
         return str;
+    }
+
+    std::vector<std::string> split(std::string strLine){
+        std::istringstream iss(strLine);
+        std::vector<std::string> result;
+        for (std::string s; iss >> s;)
+            result.push_back(s);
+        return result;
     }
 }
 
@@ -147,6 +277,16 @@ namespace Path {
         }
         std::filesystem::path returnPath(myString);
         return returnPath;
+    }
+}
+
+namespace Map {
+    std::map<std::string, bool> array2map(std::vector<std::string> myVector) {
+        std::map<std::string, bool> returnArray;
+        for (auto& element : myVector) {
+            returnArray[element] = true;
+        }
+        return returnArray;
     }
 }
 
@@ -226,7 +366,7 @@ void entityAssign(std::string line) {
 }
 
 void readMapFile(std::filesystem::path filePath) {
-    allTextureAndGdtFilePaths[filePath.make_preferred().string()] = true;
+    add2AllFiles("map", filePath.make_preferred().string());
     std::ifstream file(filePath);
     std::cout << "Reading " << filePath.string();
     if (file.is_open()) {
@@ -261,10 +401,10 @@ void readGDT(std::string gdtString) {
     std::filesystem::path gdtPath(gdtString);
     std::cout << "Reading " << gdtPath.make_preferred().string();
     std::ifstream file(gdtPath);
-    std::string colorMapName;
+    std::filesystem::path colorMapName;
     if (file.is_open()) {
         std::string line;
-        std::map<std::string, std::string> tempMap;
+        std::map<std::string, std::filesystem::path> tempMap;
         std::map<std::filesystem::path, std::string> tempGdtMap;
         while (std::getline(file, line)) {
             trim(line);
@@ -298,8 +438,8 @@ void readGDT(std::string gdtString) {
                     if (!specialCustomTexturesMap.contains(colorMapName)) {
                         specialCustomTexturesMap[colorMapName] = tempMap;
                     }
-                    if (flagName != colorMapName) {
-                        duplicateTextureMaterialsArray[colorMapName].push_back(flagName);
+                    if (flagName != colorMapName.stem().string()) {
+                        duplicateTextureMaterialsArray[colorMapName.stem().string()].push_back(flagName);
                     }
                     materialFlag = false;
                     flagName = "";
@@ -312,15 +452,15 @@ void readGDT(std::string gdtString) {
                     std::string removeSeparator = "\\\\";
                     materialName = String::replace(materialName, removeSeparator, "/");
                     std::filesystem::path materialPath(cod4RootDirectory + materialName);
-                    std::string textureFileName = String::lowerCase(materialPath.stem().string());
-                    if (!textureFilePath.contains(textureFileName) && materialPath != "") {
+                    std::filesystem::path textureFileName (String::lowerCase(materialPath.string()));
+                    if (!textureFilePath.contains(textureFileName.string()) && materialPath != "") {
                         tempGdtMap[materialPath] = gdtPath.string();
                         textureFilePath[textureFileName] = tempGdtMap;
                         tempGdtMap.clear();
                     }
 
-                    customMaterialsMap[flagName] = textureFileName;
-                    colorMapName = textureFileName;
+                    customMaterialsMap[flagName] = textureFileName.stem().string();
+                    colorMapName = textureFileName.string();
                     //std::cout << line << std::endl;
                 }
                 else if (String::str_contains(line, "\"detailMap\"") || String::str_contains(line, "\"normalMap\"") ||
@@ -333,9 +473,10 @@ void readGDT(std::string gdtString) {
                     std::string regexString = matchResults.str(2);
                     std::string removeSeparator = "\\\\";
                     regexString = String::replace(regexString, removeSeparator, "/");
-                    std::filesystem::path fullMaterialPath(cod4RootDirectory + regexString);
-                    tempMap[mapType] = fullMaterialPath.stem().string();
-                    std::string tempString = String::lowerCase(fullMaterialPath.stem().string());
+                    std::filesystem::path fullMaterialPath("");
+                    if(regexString != "") fullMaterialPath = (cod4RootDirectory + regexString);
+                    tempMap[mapType] = fullMaterialPath;
+                    std::filesystem::path tempString = String::lowerCase(fullMaterialPath.string());
                     if (!textureFilePath.contains(tempString) && fullMaterialPath != "") {
                         tempGdtMap[fullMaterialPath] = gdtPath.string();
                         textureFilePath[tempString] = tempGdtMap;
@@ -357,33 +498,133 @@ void readGDT(std::string gdtString) {
 }
 
 
+void readMaterialCSV(std::filesystem::path filePath, bool isMissingFromGdt = false) {
+    char c;
+    std::string removeSeparator = "\\\\";
+    filePath = String::replace(filePath.string(), removeSeparator, "/");
+    std::cout << "Reading " << filePath.make_preferred().string() << " material file for Textures";
+    if( !isMissingFromGdt ) add2OptionalFiles("materials", filePath.string());
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+    int counter = -1;
+    std::string textureName;
+    std::filesystem::path texturePath;
+    std::streampos size = file.tellg();
+    std::string line;
+    bool foundFlag = false;
+    if (file.is_open()) {
+        for (int i = 1; i <= size; i++) {
+            file.seekg(-i, std::ios::end);
+            file.get(c);
+            //std::cout << "C in int: " << int(c) <<" :: Char: " << c << "\n";
+            if (int(c) > 30 && int(c) < 128 || int(c) == 0) {
+                if (int(c) == 0) {
+                    line += " ";
+                    continue;
+                }
+                std::string s(1, c);
+                line += s;
+            }
+
+        }
+    }
+    else {
+        std::cout << "\n---Failed to open " << filePath.string() << "---\n";
+        file.close();
+        return;
+    }
+    std::reverse(line.begin(), line.end());
+    //if (filePath.filename().string() == "mtl_plr_dnf_duke_glasses_lens") std::cout << line << "\n";
+    //std::cout << line << "\n";
+    std::regex modelRegex( "(?:" + filePath.filename().string() + "\\s)(.*)", std::regex_constants::icase);
+    std::smatch matchResults;
+    std::regex_search(line, matchResults, modelRegex);
+    std::vector<std::string> arr = String::split(matchResults.str(1));
+    if (!isMissingFromGdt) {
+        if (!String::in_array(filePath.filename().string(), textureMapTypeFileArray)) textureMapTypeFileArray.push_back(filePath.filename().string());
+        for (int i = 0; i < arr.size(); i++) {
+            if (String::lowerCase(arr[i]) == "colortint" || String::lowerCase(arr[i]) == "envmapparms") break;
+            if (String::lowerCase(arr[i]) == "colormap" && i != 0) {
+                if (!textureMapTypeMap.contains(arr[i - 1])) textureMapTypeMap[arr[i - 1]] = arr[i];
+            }
+            else if (String::lowerCase(arr[i]) == "detailmap" || String::lowerCase(arr[i]) == "specularmap" || String::lowerCase(arr[i]) == "normalmap") {
+                if (i + 1 != arr.size() && !textureMapTypeMap.contains(arr[i + 1])) textureMapTypeMap[arr[i + 1]] = arr[i];
+            }
+            //std::cout <<i << ": " << arr[i] << "\n";
+        }
+        //std::cout << matchResults.str(1) << "\n";
+    }
+    else {
+        for (int i = 0; i < arr.size(); i++) {
+            if (String::lowerCase(arr[i]) == "colortint" || String::lowerCase(arr[i]) == "envmapparms") break;
+            if (String::lowerCase(arr[i]) == "colormap" && i != 0) {
+                if (!textureMapTypeFromMaterialMap.contains(arr[i - 1])) textureMapTypeFromMaterialMap[arr[i - 1]] = arr[i];
+            }
+            else if (String::lowerCase(arr[i]) == "detailmap" || String::lowerCase(arr[i]) == "specularmap" || String::lowerCase(arr[i]) == "normalmap") {
+                if (i + 1 != arr.size() && !textureMapTypeFromMaterialMap.contains(arr[i + 1])) textureMapTypeFromMaterialMap[arr[i + 1]] = arr[i];
+            }
+            //std::cout <<i << ": " << arr[i] << "\n";
+        }
+    }
+    std::cout << " DONE" << std::endl;
+    file.close();
+}
+
+
 void readCSV(std::filesystem::path csvPath) {
 
     std::string removeSeparator = "\\\\";
     csvPath = String::replace(csvPath.string(), removeSeparator, "/");
-    allTextureAndGdtFilePaths[csvPath.make_preferred().string()] = true;
-    std::cout << "Reading " << csvPath.make_preferred().string();
+    add2AllFiles("csv", csvPath.make_preferred().string());
+    std::cout << "Reading " << csvPath.make_preferred().string() << "\n";
     std::ifstream file(csvPath);
     if (file.is_open()) {
         std::string line;
         while (std::getline(file, line)) {
             trim(line);
+            //std::cout << line << "\n";
             std::regex modelRegex("\\W*(\\w*),(.*)", std::regex_constants::icase);
             std::smatch matchResults;
             std::regex_search(line, matchResults, modelRegex);
+            //{"fx", 1}, {"rawfile", 2}
+            std::map<std::string, std::string> materialFiles = { {"raw/material_properties/",""}, {"raw/materials/",""}, {"raw/images/",".iwi"} };
             switch (_CSVprepareSwitchCase[matchResults.str(1)]) {
             case 1:
                 if (std::filesystem::exists(cod4RootDirectory + "raw/fx/" + matchResults.str(2) + ".efx") && !fxFilesMap.contains(matchResults.str(2) + ".efx")) {
-                    allTextureAndGdtFilePaths[cod4RootDirectory + "raw/fx/" + matchResults.str(2) + ".efx"];
+                    add2AllFiles("fx", cod4RootDirectory + "raw/fx/" + matchResults.str(2) + ".efx");
                 }
                 break;
             case 2:
                 if (std::filesystem::exists(cod4RootDirectory + "raw/" + matchResults.str(2))) {
-                    allTextureAndGdtFilePaths[cod4RootDirectory + "raw/" + matchResults.str(2)];
+                    add2AllFiles("gsc", cod4RootDirectory + "raw/" + matchResults.str(2));
+                }
+                break;
+            case 3:
+                for (auto& [path, ext] : materialFiles) {
+                    std::filesystem::path myPath = cod4RootDirectory + path + matchResults.str(2) + ext;
+                    //std::cout << myPath.make_preferred().string() << "\n";
+                    if (std::filesystem::exists(myPath.make_preferred().string()) && path != "raw/materials/") {
+                        if (path == "raw/images/") {
+                            add2OptionalFiles("iwi-files", myPath.make_preferred().string());
+                        }
+                        else {
+                            add2OptionalFiles("material-props", myPath.make_preferred().string());
+                        }
+                    }
+                    if (path == "raw/materials/" ) {
+                        readMaterialCSV(myPath.make_preferred().string());
+                    }
+                }
+                break;
+            case 4:
+                if (std::filesystem::exists(cod4RootDirectory + "raw/xmodel/" + matchResults.str(2))) {
+                    if (xmodelStockPathFilesMap.contains(matchResults.str(2))) {
+                        continue;
+                    }
+                    add2OptionalFiles("xmodel", cod4RootDirectory + "raw/xmodel/" + matchResults.str(2));
                 }
                 break;
             }
-
+            
         }
         std::cout << " DONE" << std::endl;
         file.close();
@@ -435,53 +676,31 @@ bool readTxtFile(std::filesystem::path txtPath) {
     return true;
 }
 
-void readFile(std::filesystem::path filePath, std::string texture, bool searchSpecular = false) {
+void readFile(std::filesystem::path filePath, std::string texture) {
     std::cout << "Reading " << filePath.make_preferred().string() << " convertCache file";
-    allTextureAndGdtFilePaths[filePath.make_preferred().string()] = true;
+    add2AllFiles("material", filePath.make_preferred().string());
     std::ifstream file(filePath, std::ios::binary);
-    int counter = -1;
     std::string textureName;
     std::filesystem::path texturePath;
     if (file.is_open()) {
         std::string line;
         while (std::getline(file, line)) {
-            counter += 1;
             //std::cout << "Line " << counter << ": " << line << "\n";
-            if (counter == 0) {
-                std::regex modelRegex("\\W*([\\w\\\\|\\/]*)[\\\\](\\w*)", std::regex_constants::icase);
-                std::smatch matchResults;
-                std::regex_search(line, matchResults, modelRegex);
-                texturePath = matchResults.str(1) + "/" + matchResults.str(2);
-                textureName = texturePath.stem().string();
-                if (!searchSpecular) {
-                    if (textureName == "") {
-                        //std::cout << "\nTexture: " << texture << " filepath doesn't exist!\nAdding it to errLog!" << std::endl;
-                        errLog.push_back(texture);
-                    }
-                    else {
-                        addTextures(textureName);
-                        convertcacheIwiMap[texture] = textureName;
-                        //std::cout << "\nConvertCache Name: [" << filePath.filename().stem().string() << "]:" << "Texture Name: [" << textureName << "]" << std::endl;
-                    }
-                    break;
-                }
+            std::regex modelRegex("\\W*([\\w\\\\|\\/]*)[\\\\](\\w*)", std::regex_constants::icase);
+            std::smatch matchResults;
+            std::regex_search(line, matchResults, modelRegex);
+            texturePath = matchResults.str(1) + "/" + matchResults.str(2);
+            textureName = texturePath.stem().string();
+            if (textureName == "") {
+                //std::cout << "\nTexture: " << texture << " filepath doesn't exist!\nAdding it to errLog!" << std::endl;
+                errLog.push_back(texture);
             }
             else {
-                std::cout << "Line " << counter << ": " << line << "\n";
-                if (!String::str_contains(line, "-rgb&$") || !String::str_contains(line, "$white")) continue;
-                                        //((?:~\\w*-)(?:[\\w\\-\\_\\&\\$]*white-l[\\-0-9]*))
-                                        //((?:~\w*-)(?:[\w\-\_\&\$]*[\-0-9\~\w]*))
-                std::regex modelRegex("(~.*[0-9])", std::regex_constants::icase);
-                std::smatch matchResults;
-                std::regex_search(line, matchResults, modelRegex);
-                std::string foundSpecular = matchResults.str(1);
-                //std::cout << "Line " << counter << ": " << foundSpecular << "\n";
-                customTextures.push_back(foundSpecular);
-                customTexturesMap[textureName] = true;
-                break;
-
+                addTextures(textureName);
+                convertcacheIwiMap[texture] = textureName;
+                //std::cout << "\nConvertCache Name: [" << filePath.filename().stem().string() << "]:" << "Texture Name: [" << textureName << "]" << std::endl;
             }
-
+            break;
         }
         std::cout << " DONE" << std::endl;
         file.close();
@@ -493,53 +712,19 @@ void readFile(std::filesystem::path filePath, std::string texture, bool searchSp
     }
 }
 
-void readFileForSpecular(std::filesystem::path filePath) {
-    char c;
-    std::cout << "Reading " << filePath.make_preferred().string() << " convertCache file\n";
-    allTextureAndGdtFilePaths[filePath.make_preferred().string()] = true;
-    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
-    int counter = -1;
-    std::string textureName;
-    std::filesystem::path texturePath;
-    std::streampos size = file.tellg();
-    std::string line;
-    bool foundFlag = false;
-    if (file.is_open()) {
-        for (int i = 1; i <= size; i++) {
-            file.seekg(-i, std::ios::end);
-            file.get(c);
-            std::string s(1, c);
-            line += s;
-
-        }
-    }
-    else {
-        std::cout << "Failed to open " << filePath.string() << "\n";
-    }
-    std::reverse(line.begin(), line.end());
-    //std::cout << line << "\n";
-    std::regex modelRegex("(~.*[0-9])", std::regex_constants::icase);
-    std::smatch matchResults;
-    std::regex_search(line, matchResults, modelRegex);
-    std::string foundSpecular = matchResults.str(1);
-    std::cout << "Line " << counter << ": " << foundSpecular << "\n";
-    customTextures.push_back(foundSpecular);
-    customTexturesMap[textureName] = true;
-
-    std::cout << " DONE" << std::endl;
-    file.close();
-}
-
-
-
-
-void copyFile(std::string fileOriginString) {
+bool copyFile(std::string fileOriginString, bool isOptional = false) {
     std::filesystem::path fileParentRoot(fileOriginString);
     std::filesystem::path fileOrigin(cod4RootDirectory + fileParentRoot.string());
     std::filesystem::path targetOrigin(cod4RootDirectory + "z_wrapped_maps/" + mapFile.stem().string() + "/" + fileParentRoot.parent_path().string());
-    if (String::in_array(fileParentRoot.extension().string(), allExtensions)) {
-        targetOrigin = cod4RootDirectory + "z_wrapped_maps/" + mapFile.stem().string() + "_TEXTURES/" + fileParentRoot.parent_path().string();
+    if(isOptional) targetOrigin = cod4RootDirectory + "z_wrapped_maps/" + mapFile.stem().string() + "_OPTIONAL/" + fileParentRoot.parent_path().string();
+    
+    /*
+    
+    if (isSpecular) {
+        std::cout << "FileOrigin: " << fileOrigin << "\n";
     }
+    */
+
     if (std::filesystem::exists(fileOrigin)) {
         try
         {
@@ -548,12 +733,15 @@ void copyFile(std::string fileOriginString) {
             }
             const auto copyOptions = std::filesystem::copy_options::update_existing;
             std::filesystem::copy(fileOrigin, targetOrigin, copyOptions);
+            return true;
         }
         catch (std::exception& e)
         {
             std::cout << e.what() << std::endl;
+            return false;
         }
     }
+    return false;
 }
 
 void readXmodelBackwards(std::string xmodelString) {
@@ -561,7 +749,7 @@ void readXmodelBackwards(std::string xmodelString) {
     std::string removeSeparator = "\\\\";
     xmodelString = String::replace(xmodelString, removeSeparator, "/");
     std::filesystem::path xmodelPath(cod4RootDirectory + "model_export/" + xmodelString);
-    allTextureAndGdtFilePaths[xmodelPath.make_preferred().string()] = true;
+    add2AllFiles("xmodel", xmodelPath.make_preferred().string());
     std::cout << "Reading " << xmodelPath.make_preferred().string();
 
     std::ifstream myFile(xmodelPath, std::ios::ate);
@@ -594,6 +782,109 @@ void readXmodelBackwards(std::string xmodelString) {
     myFile.close();
 }
 
+/*
+void readXmodelFile(std::string xmodelString) {
+    char c;
+    std::string removeSeparator = "\\\\";
+    xmodelString = String::replace(xmodelString, removeSeparator, "/");
+    //std::filesystem::path xmodelPath(cod4RootDirectory + xmodelString);
+    std::filesystem::path xmodelPath(xmodelString);
+    allTextureAndGdtFilePaths[xmodelPath.make_preferred().string()] = true;
+    std::cout << "Reading " << xmodelPath.make_preferred().string();
+
+    std::ifstream myFile(xmodelPath, std::ios::ate | std::ios::binary);
+    std::streampos size = myFile.tellg();
+    std::map<std::string, int> texturesString;
+    std::string line;
+    bool foundNewLineFlag = false;
+    if (myFile.is_open()) {
+        for (int i = 1; i <= size; i++) {
+            myFile.seekg(-i, std::ios::end);
+            myFile.get(c);
+            std::string s(1, c);
+            if (s != "\n" || int(c) != 10) {
+                if (String::in_array(int(c), includeCharactersArray)) {
+                    line += s;
+                }
+                else if (int(c) >= 0 && int(c) < 32) {
+                    //they are in reverse order
+                    switch (int(c))
+                    {
+                    case 0:
+                        line += "<LUN>";
+                        break;
+                    case 1:
+                        line += "<HOS>";
+                        break;
+                    case 2:
+                        line += "<XTS>";
+                        break;
+                    case 4:
+                        line += "<TOE>";
+                        break;
+                    case 7:
+                        line += "<LEB>";
+                        break;
+                    }
+
+                }
+                else {
+                    if (line.length() > 0) {
+                        if(int(line.back()) != int(" ")) line += " ";
+                    } 
+                }
+            }
+            else {
+                foundNewLineFlag = true;
+                break;
+            }
+            
+        }
+    }
+    else {
+        std::cout << "Failed to open " << xmodelString << "\n";
+    }
+    //std::reverse(line.begin(), line.end());
+
+    std::cout << "String: " << line << "\n";
+    //std::string textures = String::swiftRegex(line, ".*(?:>NUL<){4}>SOH<(?:>NUL<){5}(.*)>NUL<", 1);
+    //if (textures == "") {
+    //    std::cout << "String: " << line << "\n";
+    //}
+    //else {
+    //    std::cout << textures << "\n";
+    //}
+
+    std::cout << " DONE" << std::endl;
+    myFile.close();
+}
+*/
+
+
+void echoLine(const int &maxLength, char &typeChar, std::string type = "", int sizeOfType = 0) {
+    if(type == "") std::cout << std::string(1, typeChar) << std::string(maxLength, char(32)) << std::string(1, typeChar) << "\n";
+    else {
+        //+ 14 = 2 a végén, material.length() = 8, 2xSpace = 4
+        int longestWordLength = 23;
+        int mA = floor((longestWordLength - 2 - type.length()) / 2);
+        int mB = longestWordLength - mA -2 - type.length();
+
+
+
+        std::string sizeString = "  Size:  " + std::to_string(sizeOfType);
+
+
+
+        //TODO PRINT OUT CORRECTLY
+        std::cout
+            << std::string(longestWordLength, typeChar) << std::string(maxLength - longestWordLength+1, char(32)) << std::string(1, typeChar) << "\n"
+            << std::string(1, typeChar) << std::string(mA, char(32)) << type <<  std::string(mB, char(32)) << std::string(1, typeChar)
+            << sizeString << std::string(maxLength - (longestWordLength + sizeString.length()) + 1, char(32)) << std::string(1, typeChar) << "\n"
+            << std::string(longestWordLength, typeChar) << std::string(maxLength - longestWordLength+1, char(32)) << std::string(1, typeChar) << "\n";
+    }
+}
+
+
 
 /////////Functions /> /////////
 
@@ -604,10 +895,16 @@ int main()
     SetConsoleCP(nCodePage);
     std::string currentWorkingDirectory = std::filesystem::current_path().string();
     std::filesystem::path stockFiles(currentWorkingDirectory + "/stockFiles.txt");
+
+    assignCharactersArray();
+
+    //readFileForSpecular("D:/G/Call of Duty 4/raw/materials/purple2alt");
+
+
     //std::string mapfilePath = "D:/G/Call of Duty 4/map_source/mp_stalker_v2.map";
 
     std::string mapfilePath;
-    std::cout << "CoD4 Files Wrapper v1.0 (c) skazy\n" << std::endl;
+    std::cout << "CoD4 Files Wrapper v1.1 (c) skazy\n" << std::endl;
     std::cout << "Input your .map file location, in the form of:";
     std::cout << "\nC:/Program Files (x86)/Activision/Call of Duty 4 - Modern Warfare/map_source/mapFileName.map" << std::endl;
     std::cout << "Separators can be either / or \\\n\nInput >> ";
@@ -701,6 +998,34 @@ int main()
     std::cout << "Reading Main mapfile: " << mapFile.filename() << std::endl;
     readMapFile(mapFile);
     readCSV(cod4RootDirectory + "zone_source/" + mapFile.stem().string() + ".csv");
+    /*
+    for (auto& [k,v] : textureMapTypeMap) {
+        //TODO: REST
+        if (v == "file") {
+            std::cout << "File: " << k << "\n";
+        }
+        else {
+            std::cout << v << " : " << k << "\n";
+        }
+    }
+
+    for (auto& mFile : textureMapTypeFileArray) {
+        std::cout << "File: " << mFile << "\n";
+    }
+    */
+    /*
+    
+    std::string xModelFileFilePath = "D:/G/Call of Duty 4/raw/xmodel";
+    int cooo = 0;
+    for (const auto& entry : std::filesystem::directory_iterator(xModelFileFilePath))
+    {
+        if (cooo > 20) break;
+        cooo += 1;
+        if (entry.is_directory()) continue;
+        std::cout << entry << ":\n";
+        readXmodelFile(entry.path().string());
+    }
+    */
     
     int counter = 0;
     while (counter != entities.size()) {
@@ -741,7 +1066,7 @@ int main()
                 readFile(convertCacheMaterialPath, texture);
             }
             else {
-                std::cout << ">> Texture: " << texture << " doesn't exist!\nAdding it to errLog." << std::endl;
+                std::cout << ">> Texture: {" << texture << "} doesn't exist!\nAdding it to errLog." << std::endl;
                 errLog.push_back(texture);
             }
 
@@ -761,25 +1086,31 @@ int main()
     */
 
     std::cout << "\n" << std::endl;
-    std::vector<std::string> colSpecNormArray;
+    std::map<std::string, std::filesystem::path> colSpecNormArray;
 
     for (auto& [kulcs, ertek] : specialCustomTexturesMap) {
-        if (customTexturesMap.contains(kulcs)) {
+        if (customTexturesMap.contains(kulcs.stem().string())) {
             //std::cout << "Texture: " << kulcs << "\n";
             for (auto& [k, v] : ertek) {
                 if (v == "") continue;
                 //std::cout << k << " : " << v << "\n";
-                v = String::lowerCase(v);
-                if (!String::in_array(v, colSpecNormArray) && String::lowerCase(k) == "speccolormap") {
+                v = String::lowerCase(v.string());
+                /*if (!String::in_array(v, colSpecNormArray) && String::lowerCase(k) == "speccolormap")*/ 
+                if(String::lowerCase(k) != "colormap") {
                     //std::cout << kulcs << "::" << k << "::" << v << "\n";
-                    colSpecNormArray.push_back(v);
-                    colSpecNormMap[kulcs] = v;
+                    if (v.stem().string() == "" || String::lowerCase(v.stem().string()) == "white") continue;
+                    colSpecNormArray[k] = v;
                     continue;
                 }
-                if (!String::in_array(v, customTextures)) {
-                    customTextures.push_back(v);
+                if (!String::in_array(v.string(), customTextures)) {
+                    customTextures.push_back(v.string());
+                    customTexturesMap[v.string()] = true;
                     continue;
                 }
+            }
+            if (colSpecNormArray.size() > 0) {
+                colSpecNormMap[kulcs.stem().string()] = colSpecNormArray;
+                colSpecNormArray.clear();
             }
             //std::cout << "\n";
         }
@@ -802,30 +1133,8 @@ int main()
     */
 
 
-
-    for (auto& [kulcs, ertek] : textureFilePath) {
-        //std::cout << kulcs << " :\n";
-        if (customTexturesMap.contains(kulcs) || convertcacheIwiMap.contains(kulcs)) {
-            for (auto& [k, v] : ertek) {
-                if (!allTextureAndGdtFilePaths.contains(k.string())) {
-                    allTextureAndGdtFilePaths[k.string()] = true;
-                }
-                if (!allTextureAndGdtFilePaths.contains(v)) {
-                    allTextureAndGdtFilePaths[v] = true;
-                }
-                //std::cout << k << " : " << v << " :\n";
-            }
-        }
-    }
-    for (auto& [k, v] : allTextureAndGdtFilePaths) {
-        std::filesystem::path myTemp(k);
-        std::cout << "FilePath: " << myTemp.make_preferred().string() << "\n";
-        if (myTemp.extension().string() == ".gdt") copyFile("assetsrccache/raw/source_data/" + myTemp.filename().string());
-        copyFile(myTemp.string().substr(cod4RootDirectoryLength));
-        //std::cout << "subStrPath: " << myTemp.string().substr(cod4RootDirectoryLength) << "\n\n";
-    }
-
-    std::cout << "allTextureAndGdtFilePaths size: " << allTextureAndGdtFilePaths.size() << "\n";
+    //TextureName --> [TextureFilePath, gdtFilePath]
+    //TODO Store it as : TextureName => { gdtFileName, {col,norm: filePath} }
 
     for (auto& [k, v] : customTexturesMap) {
         if (duplicateTextureMaterialsArray.contains(k)) {
@@ -842,17 +1151,307 @@ int main()
         convertCacheIwiMapReverse[v] = k;
     }
 
-    for (auto& [k, v] : colSpecNormMap) {
-        std::filesystem::path filePath(cod4RootDirectory + "convertcache/raw/materials/" + k);
-        if (!std::filesystem::exists(filePath)) {
-            filePath = cod4RootDirectory + "convertcache/raw/materials/" + convertCacheIwiMapReverse[k];
+    for (auto& [kulcs, ertek] : colSpecNormMap) {
+        //std::cout << "SpecOrNormalMap >> Texture: " << kulcs << "\n";
+        for (auto& [k,v] : ertek) {
+            //std::cout << "V>>" << k << ": J>>" << v << "\n";
+            if (k != "speccolormap") {
+                add2OptionalFiles("image", v.string());
+                if (!customTexturesMap.contains(v.stem().string())) {
+                    customTextures.push_back(v.stem().string());
+                    customTexturesMap[v.stem().string()] = true;
+                }
+            }
+            else if(k == "speccolormap") {
+                //std::cout << "Key: " << k << ", Value: " << v << "\n";
+                std::filesystem::path filePath(cod4RootDirectory + "raw/materials/" + kulcs);
+                if (!std::filesystem::exists(filePath)) {
+                    filePath = cod4RootDirectory + "raw/materials/" + convertCacheIwiMapReverse[kulcs];
+                }
+                //std::cout << "FileNameConvertCache: " << filePath.string() << "\n";
+                readMaterialCSV(filePath,true);
+                add2OptionalFiles("image",v.string());
+                
+            }
         }
-        //std::cout << filePath.string() << "\n";
-        readFileForSpecular(filePath);
     }
 
+    std::map<std::string, bool> wasInGDT;
+    std::map<std::string, bool> inGdt;
+
+    for (auto& [kulcs, ertek] : textureFilePath) {
+        inGdt[kulcs.stem().string()] = true;
+        //std::cout << "Kulcs: " << kulcs.stem().string() << "\n";
+        if (customTexturesMap.contains(kulcs.stem().string()) || convertcacheIwiMap.contains(kulcs.stem().string())) {
+            for (auto& [k, v] : ertek) {
+                add2OptionalFiles("image",k.string());
+                add2AllFiles("gdt", v);
+
+                //std::cout << "K: " << k << " : " << "V: " << v << " :\n";
+            }
+            //std::cout << "\n";
+        }
+    }
+
+    for (auto& [k, v] : customTexturesMap) {
+        if (!inGdt.contains(k)) {
+            std::cout << "File: \n <<" << k << ">> doesn't exist in any GDT files!\n";
+            std::string myPath = cod4RootDirectory + "raw/materials/" + k;
+            readMaterialCSV(myPath, true);
+        }
+    }
+
+    for (auto& [k, v] : textureMapTypeFromMaterialMap) {
+        if (String::lowerCase(v) == "specularmap") {
+            specularTexturesArray.push_back(k);
+        }
+        else {
+            if (!customTexturesMap.contains(k)) {
+                customTexturesMap[k] = true;
+                customTextures.push_back(k);
+            }
+        }
+    }
+
+    std::map<std::string, int> extraCSVMap{ {"raw/maps/", 0}, {"assettgtcache/raw/raw/maps/", 0}, {"zone_source/english/assetlist/", 1},
+       {"zone_source/english/assetinfo/", 2}, {"zone_source/", 1} };
+
+    for (auto& [k, v] : extraCSVMap) {
+        std::string myString = k + mapFile.stem().string();
+        if (std::filesystem::exists(cod4RootDirectory + myString + ".csv")) {
+            copyFile(myString + ".csv");
+            add2AllFiles("csv", cod4RootDirectory + myString + ".csv");
+        }
+        switch (v) {
+        case 1:
+            if (std::filesystem::exists(cod4RootDirectory + myString + "_load.csv")) {
+                copyFile(myString + "_load.csv");
+                add2AllFiles("csv", cod4RootDirectory + myString + "_load.csv");
+            }
+            break;
+        case 2:
+            if (std::filesystem::exists(cod4RootDirectory + myString + "_load.csv")) {
+                copyFile(myString + "_load.csv");
+                add2AllFiles("csv", cod4RootDirectory + myString + "_load.csv");
+            }
+            if (std::filesystem::exists(cod4RootDirectory + myString + "_load_total.csv")) {
+                copyFile(myString + "_load_total.csv");
+                add2AllFiles("csv", cod4RootDirectory + myString + "_load_total.csv");
+            }
+
+
+            break;
+
+        }
+    }
+
+    std::map<std::string, std::string> extraFiles{ {"bin/CoD4CompileTools", "settings"} };
+
+    for (auto& [k, v] : extraFiles) {
+        if (std::filesystem::exists(cod4RootDirectory + k + "/" + mapFile.stem().string() + "." + v)) {
+            copyFile(k + "/" + mapFile.stem().string() + "." + v);
+            add2AllFiles("extra", cod4RootDirectory + k + "/" + mapFile.stem().string() + "." + v);
+        }
+    }
+
+    
+//####################################################################################################################################################################################
+                                                                        //Print out all Files it collected//
+                                                                        ////////////////////////////////////
+    int extra = 0;
+    char borderChar = char(35);
+    char spaceChar = char(32);
+
+    std::string tab = "          ";
+    std::string printLine = "FilePath: ";
+    const int maxLength = allTextureAndGdtFilePathsMaxLength + printLine.length() + 2*tab.length();
+    std::string headLine = "  All Files  ";
+
+    std::map < std::string, bool > customMap = Map::array2map(customTextures);
+    std::map < std::string, bool > specMap = Map::array2map(specularTexturesArray);
+    std::map < std::string, bool > customModelMap;
+
+    for (auto& [k,v] : modelsMap) {
+        if (!xmodelStockPathFilesMap.contains(k) && !customModelMap.contains(k)) {
+            customModelMap[k] = true;
+        }
+    }
+
+
+    std::map<std::map<std::string, bool>, std::string> accumulatedFilesMap{
+        {allMapFiles, "map"}, {allCSVFiles, "csv"}, {allFXFiles, "fx"}, {allGDTFiles, "gdt"},
+        {customMap, "textures"}, {specMap, "specular-textures"}, {customModelMap, "xmodel"},
+        {allGscFiles, "gsc"}, {allExtraFiles, "extra"} 
+    };
+
+    std::map<std::string, bool> exclusionMaps{ {"textures", true}, {"specular-textures", true}, {"xmodel", true } };
+
+
+    int maxMapSize = 0;
+    for (auto& [k, v] : accumulatedFilesMap) {
+        maxMapSize += k.size();
+    }
+    std::string sizeString = "  Size:  " + std::to_string(maxMapSize) + std::string(2, spaceChar);
+    std::cout << "\n" << std::string(headLine.length() + 3 + sizeString.length(), borderChar) << "\n"
+        << std::string(1, borderChar) << headLine << std::string(1, borderChar) << sizeString << std::string(1, borderChar) << "\n"
+        << std::string(maxLength+2, borderChar) << "\n"
+        << std::string(1, borderChar) << std::string(maxLength, spaceChar) << std::string(1, borderChar) << "\n";
+
+
+    for (auto & [subMap, type]: accumulatedFilesMap) {
+        echoLine(maxLength, borderChar);
+        echoLine(maxLength, borderChar, type, subMap.size());
+        echoLine(maxLength, borderChar);
+        for (auto& [k, v] : subMap) {
+            std::filesystem::path myTemp(k);
+            int stringLength;
+            if (!exclusionMaps.contains(type)) stringLength = myTemp.make_preferred().string().length() + printLine.length() + 2 * tab.length();
+            else stringLength = myTemp.make_preferred().string().length() + 2 * tab.length();
+            std::cout
+                << std::string(1, borderChar)
+                << tab;
+            if(!exclusionMaps.contains(type)) std::cout<< printLine;
+            std::cout
+                << myTemp.make_preferred().string()
+                << std::string(maxLength - stringLength, spaceChar)
+                << tab
+                << std::string(1, borderChar) << "\n";
+
+            if (myTemp.extension().string() == ".gdt") {
+                if (std::filesystem::exists(cod4RootDirectory + "assetsrccache/raw/source_data/" + myTemp.filename().string())) {
+                    copyFile("assetsrccache/raw/source_data/" + myTemp.filename().string());
+                    extra += 1;
+                }
+            }
+            if(!exclusionMaps.contains(type)) copyFile(myTemp.string().substr(cod4RootDirectoryLength));
+            //std::cout << "subStrPath: " << myTemp.string().substr(cod4RootDirectoryLength) << "\n\n";
+        }
+    }
+
+    echoLine(maxLength, borderChar);
+    echoLine(maxLength, borderChar, "material-iwi", convertcacheIwiMap.size());
+    echoLine(maxLength, borderChar);
+    int longestCacheFile  = 0;
+    for (auto& [k, v] : convertcacheIwiMap) {
+        if (k.length() > longestCacheFile) longestCacheFile = k.length();
+    }
+    std::string firstLine = tab + "Material: " + std::string(longestCacheFile, char(32)) + "Textures: ";
+    std::cout << std::string(1, borderChar) << firstLine << std::string(maxLength - firstLine.length(), char(32))  << std::string(1, borderChar) << "\n";
+    echoLine(maxLength, borderChar);
+    for (auto& [k, v] : convertcacheIwiMap) {
+        std::string myLine = tab + k + std::string(longestCacheFile - k.length(), char(32)) + tab + v;
+        std::cout
+            << std::string(1, borderChar) << myLine
+            << std::string(maxLength - myLine.length(), spaceChar)
+            << std::string(1, borderChar) << "\n";
+    }
+
+    std::cout << std::string(1, borderChar) << std::string(maxLength, spaceChar) << std::string(1, borderChar) << "\n"
+        << std::string(maxLength+2, borderChar) << "\n";
+
+//####################################################################################################################################################################################
+// 
+// 
+//####################################################################################################################################################################################
+                                                                        //Print out all Optional Files it collected//
+                                                                        /////////////////////////////////////////////
+    if (optionalFilePathsMaxLength == 0) optionalFilePathsMaxLength = 20;
+    const int maxLengthOptional = optionalFilePathsMaxLength + printLine.length() + 2 * tab.length();
+    std::string headLineOptional = "  All Optional Files  ";
+    
+    for (auto& [k,v] : textureMapTypeMap) {
+        std::filesystem::path pathLine( cod4RootDirectory + "raw/images/" + k + ".iwi");
+        if(!iwiFiles.contains(pathLine.make_preferred().string())) iwiFiles[pathLine.make_preferred().string()] = true;
+    }
+
+
+    std::map<std::map<std::string, bool>, std::string> accumulatedOptionalFilesMap{
+        {imageFiles, "image"}, {materialFiles, "materials"}, {materialPropsFiles, "material-props"}, {xmodelFiles, "xmodel"}, {iwiFiles, "iwi-files"}
+    };
+
+    int maxMapOptionalSize = 0;
+    for (auto& [k, v] : accumulatedOptionalFilesMap) {
+        maxMapOptionalSize += k.size();
+    }
+
+
+
+    std::string sizeStringOptional = "  Size:  " + std::to_string(maxMapOptionalSize) + std::string(2, spaceChar);
+    std::cout << "\n" << std::string(headLineOptional.length() + 3 + sizeStringOptional.length(), borderChar) << "\n"
+        << std::string(1, borderChar) << headLineOptional << std::string(1, borderChar) << sizeStringOptional << std::string(1, borderChar) << "\n"
+        << std::string(maxLengthOptional + 2, borderChar) << "\n"
+        << std::string(1, borderChar) << std::string(maxLengthOptional, spaceChar) << std::string(1, borderChar) << "\n";
+
+    for (auto& [subMap, type] : accumulatedOptionalFilesMap) {
+        if (subMap.size() > 0) {
+            echoLine(maxLengthOptional, borderChar);
+            echoLine(maxLengthOptional, borderChar, type, subMap.size());
+            echoLine(maxLengthOptional, borderChar);
+            for (auto& [k, v] : subMap) {
+                std::filesystem::path myTemp(k);
+                int stringLength = myTemp.make_preferred().string().length() + printLine.length() + 2 * tab.length();
+                std::cout
+                    << std::string(1, borderChar)
+                    << tab
+                    << printLine
+                    << myTemp.make_preferred().string()
+                    << std::string(maxLengthOptional - stringLength, spaceChar)
+                    << tab
+                    << std::string(1, borderChar);
+
+
+                if (!copyFile(myTemp.string().substr(cod4RootDirectoryLength), true)) std::cout << " FAILED";
+                else {
+                    std::string model = myTemp.filename().string();
+                    if (type == "xmodel") {
+                        //std::cout << model << "\n";
+                        if (std::filesystem::exists(".errlog")) {
+                            copyFile("export_errors/models/" + myTemp.parent_path().string() + model + ".errlog", true);
+                        }
+                        for (auto& [k, v] : xmodelPartsMap) {
+
+                            for (int i = 0; i < 4; i++) {
+                                if (xmodelStockPathFilesMap.contains(model)) {
+                                    break;
+                                }
+                                if (v == false) {
+                                    copyFile(k + model, true);
+                                    break;
+                                }
+                                else {
+                                    copyFile(k + model + std::to_string(i), true);
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+                std::cout << "\n";
+                //std::cout << "subStrPath: " << myTemp.string().substr(cod4RootDirectoryLength) << "\n\n";
+            }
+       }
+    }
+
+    std::cout << std::string(1, borderChar) << std::string(maxLengthOptional, spaceChar) << std::string(1, borderChar) << "\n"
+        << std::string(maxLengthOptional + 2, borderChar) << "\n";
+
+    //####################################################################################################################################################################################
+
+    std::cout << "Copying all Optional Files... DONE\n";
+
+    std::cout << "Copying Specular Textures...";
+    for (int i = 0; i < specularTexturesArray.size(); i++) {
+        copyFile("raw/images/" + specularTexturesArray[i] + ".iwi");
+        copyFile("assettgtcache/raw/raw/images/" + specularTexturesArray[i] + ".iwi");
+        copyFile("convertcache/raw/images/" + specularTexturesArray[i]);
+    }
+    std::cout << " DONE";
+
+    std::cout << "\nCopying Custom Textures...";
     for (int i = 0; i < customTextures.size(); i++) {
-        std::cout << ">> Texture: [[" << customTextures[i] << "]] is a valid custom texture!" << std::endl;
         copyFile("assettgtcache/raw/raw/material_properties/" + customTextures[i]);
         copyFile("assettgtcache/raw/raw/materials/" + customTextures[i]);
         copyFile("assettgtcache/raw/raw/images/" + customTextures[i] + ".iwi");
@@ -862,37 +1461,38 @@ int main()
         copyFile("convertcache/raw/images/" + customTextures[i]);
         copyFile("convertcache/raw/materials/" + customTextures[i]);
     }
+    std::cout << " DONE\n";
 
-
-
+    std::cout << "Copying Material Files...";
     for (auto& [k, v] : convertcacheIwiMap) {
-        std::cout << ">> Texture: [[" << k << "]] is a valid custom texture under [[" << v << "]] name!" << std::endl;
+        //std::cout << ">> Texture: [[" << k << "]] is a valid custom texture under [[" << v << "]] name!" << std::endl;
         copyFile("assettgtcache/raw/raw/material_properties/" + k);
         copyFile("assettgtcache/raw/raw/materials/" + k);
         copyFile("raw/material_properties/" + k);
         copyFile("raw/materials/" + k);
         copyFile("convertcache/raw/materials/" + k);
     }
-    std::cout << "ConvertCache - IWI Pair Size: " << convertcacheIwiMap.size() << "\n" << std::endl;
+    //std::cout << "ConvertCache - IWI Pair Size: " << convertcacheIwiMap.size();
+    std::cout << "... DONE\n";
 
-    std::map<std::string, bool> xmodelPartsMap{ {"raw/xmodelsurfs/", true}, {"raw/xmodel/", false}, {"raw/xmodelparts/", true},
-        {"assettgtcache/raw/raw/xmodel/", false}, {"assettgtcache/raw/raw/xmodelparts/", true}, {"assettgtcache/raw/raw/xmodelsurfs/", true} };
+
 
     std::string result = "";
+    std::cout << "Copying xModels...";
     for (auto& [model, path] : modelsMap) {
         if (std::filesystem::exists(cod4RootDirectory + "export_errors/models/" + model + ".errlog")) {
             copyFile("export_errors/models/" + model + ".errlog");
         }
-        std::cout << "Model: {{" << model << "}}";
+        //std::cout << "Model: {{" << model << "}}";
 
         for (auto& [k, v] : xmodelPartsMap) {
 
             for (int i = 0; i < 4; i++) {
                 if (xmodelStockPathFilesMap.contains(model)) {
-                    if (result == "") result = " is a Stock Model! Not copying...\n";
+                    //if (result == "") result = " is a Stock Model! Not copying...\n";
                     break;
                 }
-                if (result == "") result = " is a Custom Model! Copying...\n";
+                //if (result == "") result = " is a Custom Model! Copying...\n";
                 if (v == false) {
                     copyFile(k + model);
                     break;
@@ -904,34 +1504,15 @@ int main()
             }
 
         }
-        std::cout << result;
-        result = "";
+        //std::cout << result;
+        //result = "";
     }
+    std::cout << " DONE\n";
 
-    std::map<std::string, int> extraCSVMap{ {"raw/maps/", 0}, {"assettgtcache/raw/raw/maps/", 0}, {"zone_source/english/assetlist/", 1},
-        {"zone_source/english/assetinfo/", 2}, {"zone_source/", 1} };
-
-    for (auto& [k, v] : extraCSVMap) {
-        copyFile(k + mapFile.stem().string() + ".csv");
-        switch (v) {
-        case 1:
-            copyFile(k + mapFile.stem().string() + "_load.csv");
-            break;
-        case 2:
-            copyFile(k + mapFile.stem().string() + "_load.csv");
-            copyFile(k + mapFile.stem().string() + "_load_total.csv");
-            break;
-
+    if (errLog.size() > 0) {
+        for (auto& texture : errLog) {
+            std::cout << ">> Texture {{" << texture << "}} has a mismatch!" << std::endl;
         }
-    }
-    std::map<std::string, std::string> extraFiles{ {"bin/CoD4CompileTools", "settings"} };
-
-    for (auto& [k, v] : extraFiles) {
-        copyFile(k + "/" + mapFile.stem().string() + "." + v);
-    }
-
-    for (auto& texture : errLog) {
-        std::cout << ">> Texture {{" << texture << "}} has a mismatch!" << std::endl;
     }
 
     std::cout << "\nStock Texture Count: " << stockTexturesArray.size() << std::endl;
