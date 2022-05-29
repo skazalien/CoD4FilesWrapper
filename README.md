@@ -8,6 +8,7 @@ This tool is mostly made for ***CodJumper***, so if you happen to notice any fil
 The tool is meant to be really simplified, not *GUI* dependant.
 
 ## Includes
+- *.setting*
 - *.gdt*
 - *.efx*
 - *.csv*
@@ -19,9 +20,10 @@ The tool is meant to be really simplified, not *GUI* dependant.
 - *materials*
 - *materials_properties*
 - *xmodel files*
+- *playerModel files*
 
 Copying all .iwi files from **'z_wrapped_maps/***YourMapName***/raw/images'** can be put immediately into your 'map.iwd'.
-The wrapped map folder contains the optional ___YourMapName___**_TEXTURES** subfolder containing all Image files. These are not required to have a functioning copy of your map.
+The wrapped map folder contains the optional ___YourMapName___**_OPTIONAL** subfolder containing all Image files. These are not required to have a functioning copy of your map.
 
 ## How To Use
 
@@ -36,11 +38,7 @@ And thats it, your map copy is done!
 
 
 ### TODO:
-- [ ] .csv materials, xmodel support[^2]
-- [ ] Update code itself[^3]
-- [ ] Adding more Optional Files[^4]
+- [ ] Adding more Optional Files[^2]
 
 [^1]: stockFiles.txt
-[^2]: I'll look into it, if it's requested. I left it out, as it's a major concern for CodJumper maps as not to exceed engine limits on some maps.
-[^3]: There are some unique cases that currently I'm trying to find a solution for, such as levels.gdt or reflections.csv.
-[^4]: These are files that'd most likely would overwrite other's particular file(s).
+[^2]: These are files that'd most likely would overwrite other's particular file(s).
