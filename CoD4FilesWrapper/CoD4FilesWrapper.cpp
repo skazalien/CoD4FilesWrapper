@@ -1,7 +1,7 @@
 // CoD4FilesWrapper.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-#include <iostream>
+#include <iostream>0
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -16,6 +16,7 @@
 #include <locale>
 #include <codecvt>
 #include <Windows.h>
+#include "color.h";
 
 
 ///////// < Global Variables //////////
@@ -54,6 +55,12 @@ std::map<std::string, bool> xmodelStockPathFilesMap;
 std::map<std::string, bool> fxFilesMap;
 
 std::vector<std::string> errLog;
+
+std::vector<std::filesystem::path> readArray;
+int longestReadArrayStringLength = 0;
+int longestGdtLineLength = 0;
+int maxModelsLength = 0;
+int longestFileLength = 0;
 
 std::vector<std::string> customTextures;
 std::map<std::string, bool> customTexturesMap;
@@ -113,6 +120,7 @@ std::map<std::string, bool> iwiFiles;           //
 int optionalFilePathsMaxLength;                 //
 //////////////////////////////////////////////////
 
+std::string preferredSeparator;
 
 
 
@@ -368,7 +376,8 @@ void entityAssign(std::string line) {
 void readMapFile(std::filesystem::path filePath) {
     add2AllFiles("map", filePath.make_preferred().string());
     std::ifstream file(filePath);
-    std::cout << "Reading " << filePath.string();
+
+    std::cout << dye::light_green("[+] ") << "Reading " << filePath.string();
     if (file.is_open()) {
         std::string line;
         while (std::getline(file, line)) {
@@ -390,16 +399,19 @@ void readMapFile(std::filesystem::path filePath) {
                 entityAssign(line);
             }
         }
-        std::cout << " DONE" << std::endl;
+        std::cout << dye::aqua(" DONE") << std::endl;
         file.close();
         reassignValues();
-
+    }
+    else {
+        std::cout << dye::red("Failed to open file: ") << dye::red(filePath.filename().string()) << "\n";
     }
 }
 
 void readGDT(std::string gdtString) {
     std::filesystem::path gdtPath(gdtString);
-    std::cout << "Reading " << gdtPath.make_preferred().string();
+    std::cout << dye::light_green("[+] ") << "Reading " << gdtPath.make_preferred().string();
+    int firstLineLength = 12 + gdtPath.make_preferred().string().length();
     std::ifstream file(gdtPath);
     std::filesystem::path colorMapName;
     if (file.is_open()) {
@@ -490,10 +502,13 @@ void readGDT(std::string gdtString) {
                 }
             }
         }
-        std::cout << " DONE" << std::endl;;
+        std::cout << dye::aqua(" DONE") << std::endl;;
         file.close();
         materialFlag = false;
         xmodelFlag = false;
+    }
+    else {
+        std::cout << dye::red("Failed to open file: ") << dye::red(gdtPath.filename().string()) << "\n";
     }
 }
 
@@ -502,7 +517,8 @@ void readMaterialCSV(std::filesystem::path filePath, bool isMissingFromGdt = fal
     char c;
     std::string removeSeparator = "\\\\";
     filePath = String::replace(filePath.string(), removeSeparator, "/");
-    std::cout << "Reading " << filePath.make_preferred().string() << " material file for Textures";
+    std::cout << dye::light_green("[+] ") << "Reading " << filePath.make_preferred().string();
+    int firstLineLength = 12 + filePath.string().length();
     if( !isMissingFromGdt ) add2OptionalFiles("materials", filePath.string());
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
     int counter = -1;
@@ -528,7 +544,7 @@ void readMaterialCSV(std::filesystem::path filePath, bool isMissingFromGdt = fal
         }
     }
     else {
-        std::cout << "\n---Failed to open " << filePath.string() << "---\n";
+        std::cout << dye::red("\n---Failed to open ") << dye::red(filePath.string()) << "---\n";
         file.close();
         return;
     }
@@ -565,7 +581,7 @@ void readMaterialCSV(std::filesystem::path filePath, bool isMissingFromGdt = fal
             //std::cout <<i << ": " << arr[i] << "\n";
         }
     }
-    std::cout << " DONE" << std::endl;
+    std::cout <<  dye::aqua(" DONE") << std::endl;
     file.close();
 }
 
@@ -575,7 +591,7 @@ void readCSV(std::filesystem::path csvPath) {
     std::string removeSeparator = "\\\\";
     csvPath = String::replace(csvPath.string(), removeSeparator, "/");
     add2AllFiles("csv", csvPath.make_preferred().string());
-    std::cout << "Reading " << csvPath.make_preferred().string() << "\n";
+    std::cout << dye::light_green("[+] ") << "Reading " << csvPath.make_preferred().string();
     std::ifstream file(csvPath);
     if (file.is_open()) {
         std::string line;
@@ -611,7 +627,9 @@ void readCSV(std::filesystem::path csvPath) {
                         }
                     }
                     if (path == "raw/materials/" ) {
-                        readMaterialCSV(myPath.make_preferred().string());
+                        readArray.push_back(myPath.make_preferred().string());
+                        if (myPath.make_preferred().string().length() > longestReadArrayStringLength)
+                            longestReadArrayStringLength = myPath.make_preferred().string().length();
                     }
                 }
                 break;
@@ -626,8 +644,11 @@ void readCSV(std::filesystem::path csvPath) {
             }
             
         }
-        std::cout << " DONE" << std::endl;
+        std::cout << dye::aqua(" DONE") << std::endl;
         file.close();
+    }
+    else {
+        std::cout << dye::red("Failed to open file: ") << dye::red(csvPath.filename().string()) << "\n";
     }
 }
 
@@ -636,9 +657,10 @@ void readCSV(std::filesystem::path csvPath) {
 //1 == StockTextures, 2 == stockSourceFiles, 3 == xmodelStockFiles, 4 == fxFiles
 bool readTxtFile(std::filesystem::path txtPath) {
     std::ifstream file(txtPath);
-    std::cout << "Reading " << txtPath.string();
+    std::cout << dye::light_green("[+] ") << "Reading " << txtPath.string();
     if (!std::filesystem::exists(txtPath)) {
-        std::cout << "\n" << txtPath.filename().string() << " doesn't exist!\nGet working version from my GitHub!\nGitHub: https://github.com/skazalien/Cod4FilesWrapper \nExiting program." << std::endl;
+        std::cout << "\n" << dye::green(txtPath.filename().string()) << dye::red(" doesn't exist!\n") << "Get working version from my GitHub!\n" << 
+              "GitHub: https://github.com/skazalien/Cod4FilesWrapper \nExiting program." << std::endl;
         return false;
     }
     int fileType = 0;
@@ -670,14 +692,15 @@ bool readTxtFile(std::filesystem::path txtPath) {
                 break;
             }
         }
-        std::cout << " DONE" << std::endl;
+        std::cout << dye::aqua(" DONE") << std::endl;
         file.close();
     }
     return true;
 }
 
 void readFile(std::filesystem::path filePath, std::string texture) {
-    std::cout << "Reading " << filePath.make_preferred().string() << " convertCache file";
+    std::cout << dye::light_green("[+] ") << "Reading " << filePath.make_preferred().string();
+    int firstLineLength = 12 + filePath.make_preferred().string().length();
     add2AllFiles("material", filePath.make_preferred().string());
     std::ifstream file(filePath, std::ios::binary);
     std::string textureName;
@@ -702,13 +725,13 @@ void readFile(std::filesystem::path filePath, std::string texture) {
             }
             break;
         }
-        std::cout << " DONE" << std::endl;
+        std::cout << dye::aqua(" DONE") << std::endl;
         file.close();
         reassignValues();
         return;
     }
     else {
-        std::cout << "File: " << filePath.filename().string() << " doesn't exist!\n Adding it to errLog!" << std::endl;
+        std::cout << dye::red("Failed to open file: ") << dye::red(filePath.filename().string()) << "\n";
     }
 }
 
@@ -737,7 +760,7 @@ bool copyFile(std::string fileOriginString, bool isOptional = false) {
         }
         catch (std::exception& e)
         {
-            std::cout << e.what() << std::endl;
+            std::cout << dye::red(e.what()) << std::endl;
             return false;
         }
     }
@@ -748,10 +771,10 @@ void readXmodelBackwards(std::string xmodelString) {
     char c;
     std::string removeSeparator = "\\\\";
     xmodelString = String::replace(xmodelString, removeSeparator, "/");
-    std::filesystem::path xmodelPath(cod4RootDirectory + "model_export/" + xmodelString);
+    std::filesystem::path xmodelPath(cod4RootDirectory + xmodelString);
     add2AllFiles("xmodel", xmodelPath.make_preferred().string());
-    std::cout << "Reading " << xmodelPath.make_preferred().string();
-
+    std::cout << dye::light_green("[+] ") << "Reading " << xmodelPath.make_preferred().string();
+    int firstLineLength = 12 + xmodelPath.make_preferred().string().length();
     std::ifstream myFile(xmodelPath, std::ios::ate);
     std::streampos size = myFile.tellg();
     if (myFile.is_open()) {
@@ -776,9 +799,9 @@ void readXmodelBackwards(std::string xmodelString) {
         }
     }
     else {
-        std::cout << "Failed to open " << xmodelString << "\n";
+        std::cout << dye::red("Failed to open ") << dye::red(xmodelString) << "\n";
     }
-    std::cout << " DONE" << std::endl;
+    std::cout <<  dye::aqua(" DONE") << std::endl;
     myFile.close();
 }
 
@@ -790,7 +813,7 @@ void readXmodelFile(std::string xmodelString) {
     //std::filesystem::path xmodelPath(cod4RootDirectory + xmodelString);
     std::filesystem::path xmodelPath(xmodelString);
     allTextureAndGdtFilePaths[xmodelPath.make_preferred().string()] = true;
-    std::cout << "Reading " << xmodelPath.make_preferred().string();
+    std::cout << dye::light_green("[+] ") << "Reading " << xmodelPath.make_preferred().string();
 
     std::ifstream myFile(xmodelPath, std::ios::ate | std::ios::binary);
     std::streampos size = myFile.tellg();
@@ -862,7 +885,7 @@ void readXmodelFile(std::string xmodelString) {
 
 
 void echoLine(const int &maxLength, char &typeChar, std::string type = "", int sizeOfType = 0) {
-    if(type == "") std::cout << std::string(1, typeChar) << std::string(maxLength, char(32)) << std::string(1, typeChar) << "\n";
+    if(type == "") std::cout << dye::light_purple(std::string(1, typeChar)) << std::string(maxLength, char(32)) << dye::light_purple(std::string(1, typeChar)) << "\n";
     else {
         //+ 14 = 2 a végén, material.length() = 8, 2xSpace = 4
         int longestWordLength = 23;
@@ -877,10 +900,10 @@ void echoLine(const int &maxLength, char &typeChar, std::string type = "", int s
 
         //TODO PRINT OUT CORRECTLY
         std::cout
-            << std::string(longestWordLength, typeChar) << std::string(maxLength - longestWordLength+1, char(32)) << std::string(1, typeChar) << "\n"
-            << std::string(1, typeChar) << std::string(mA, char(32)) << type <<  std::string(mB, char(32)) << std::string(1, typeChar)
-            << sizeString << std::string(maxLength - (longestWordLength + sizeString.length()) + 1, char(32)) << std::string(1, typeChar) << "\n"
-            << std::string(longestWordLength, typeChar) << std::string(maxLength - longestWordLength+1, char(32)) << std::string(1, typeChar) << "\n";
+            << dye::light_purple(std::string(longestWordLength, typeChar)) << std::string(maxLength - longestWordLength+1, char(32)) << dye::light_purple(std::string(1, typeChar)) << "\n"
+            << dye::light_purple(std::string(1, typeChar)) << std::string(mA, char(32)) << dye::aqua(type) <<  std::string(mB, char(32)) << dye::light_purple(std::string(1, typeChar))
+            << dye::aqua(sizeString) << std::string(maxLength - (longestWordLength + sizeString.length()) + 1, char(32)) << dye::light_purple(std::string(1, typeChar)) << "\n"
+            << dye::light_purple(std::string(longestWordLength, typeChar)) << std::string(maxLength - longestWordLength+1, char(32)) << dye::light_purple(std::string(1, typeChar)) << "\n";
     }
 }
 
@@ -890,6 +913,9 @@ void echoLine(const int &maxLength, char &typeChar, std::string type = "", int s
 
 int main()
 {
+
+
+
     setlocale(LC_ALL, "");
     SetConsoleOutputCP(nCodePage);
     SetConsoleCP(nCodePage);
@@ -906,10 +932,10 @@ int main()
     std::string mapfilePath;
     std::cout << "CoD4 Files Wrapper v1.1 (c) skazy\n" << std::endl;
     std::cout << "Input your .map file location, in the form of:";
-    std::cout << "\nC:/Program Files (x86)/Activision/Call of Duty 4 - Modern Warfare/map_source/mapFileName.map" << std::endl;
+    std::cout << "\n" << dye::aqua("C:/Program Files (x86)/Activision/Call of Duty 4 - Modern Warfare/map_source/mapFileName.map") << std::endl;
     std::cout << "Separators can be either / or \\\n\nInput >> ";
     std::getline(std::cin, mapfilePath);
-    std::cout << "The given path: " << mapfilePath << std::endl;
+    std::cout << "The given path: " << dye::red(mapfilePath) << std::endl;
     while (true) {
         if (!std::filesystem::exists(mapfilePath)) {
             std::cout << "File doesn't exist...\nInput >> " << std::endl;
@@ -930,7 +956,14 @@ int main()
     std::vector<std::filesystem::path> directoryArray;
     &mapFile.make_preferred();
     for (auto i = mapFile.begin(); i != mapFile.end(); i++) {
-        if (*i == "\\" || *i == "/") continue;
+        if (*i == "\\") {
+            preferredSeparator = "\\";
+            continue;
+        }
+        else if (*i == "/") {
+            preferredSeparator = "/";
+            continue;
+        }
         directoryArray.push_back(*i);
     }
 
@@ -971,7 +1004,7 @@ int main()
         }
     }
 
-    std::cout << "Your Cod4 Directory: " << cod4RootDirectory << std::endl;
+    std::cout << "Your Cod4 Directory: " << dye::red(cod4RootDirectory) << std::endl;
     std::string sourceDataPath = cod4RootDirectory + "source_data";
 
 
@@ -987,17 +1020,29 @@ int main()
 
 
 
-    std::vector<std::string> allGdtFiles;
+    std::vector<std::string> allGdtFilesArray;
     for (const auto& entry : std::filesystem::directory_iterator(sourceDataPath))
     {
         if (entry.is_directory() || stockSourceDataFilesMap.contains(entry.path().stem().string())) continue;
-        allGdtFiles.push_back(entry.path().string());
+        allGdtFilesArray.push_back(entry.path().string());
+        if (longestGdtLineLength < entry.path().string().length())
+            longestGdtLineLength = entry.path().string().length();
         //std::cout << entry << std::endl;
     }
 
-    std::cout << "Reading Main mapfile: " << mapFile.filename() << std::endl;
+    std::cout << dye::light_green("[+] ") << "Reading Main mapfile: " << dye::red(mapFile.filename()) << std::endl;
     readMapFile(mapFile);
     readCSV(cod4RootDirectory + "zone_source/" + mapFile.stem().string() + ".csv");
+    if (readArray.size() > 0) {
+        std::string printOut = " CSV Materials ";
+        int halfLength = floor(longestReadArrayStringLength / 2);
+        std::cout << "\n" << dye::purple(std::string(halfLength + 2, char(61))) << dye::red(printOut) << dye::purple(std::string(halfLength + 2, char(61))) << "\n";
+        for (auto& myPath : readArray) {
+            readMaterialCSV(myPath.make_preferred().string());
+        }
+        std::cout << dye::purple(std::string(halfLength*2 + printOut.length() + 4, char(61))) << "\n\n";
+    }
+
     /*
     for (auto& [k,v] : textureMapTypeMap) {
         //TODO: REST
@@ -1028,24 +1073,58 @@ int main()
     */
     
     int counter = 0;
-    while (counter != entities.size()) {
-        std::filesystem::path entityPath(cod4RootDirectory + "map_source/" + entities[counter]);
-        readMapFile(entityPath.make_preferred());
-        counter += 1;
+    if (entities.size() > 0) {
+        std::string printOut = " Map Files ";
+        if (longestReadArrayStringLength == 0) longestReadArrayStringLength = mapFile.string().length();
+        longestReadArrayStringLength += 15;
+        int halfLength = floor(longestReadArrayStringLength / 2);
+        std::cout << "\n" << dye::purple(std::string(halfLength + 2, char(61))) << dye::red(printOut) << dye::purple(std::string(halfLength + 2, char(61))) << "\n";
+        while (counter != entities.size()) {
+            std::filesystem::path entityPath(cod4RootDirectory + "map_source/" + entities[counter]);
+            readMapFile(entityPath.make_preferred());
+            counter += 1;
+        }
+        std::cout << dye::purple(std::string(halfLength*2 + printOut.length() + 4, char(61))) << "\n\n";
     }
 
-    for (auto& gdtfile : allGdtFiles) {
-        readGDT(gdtfile);
+    longestReadArrayStringLength = 0;
+
+    if (allGdtFilesArray.size() > 0) {
+        std::string printOut = " GDT Files ";
+        int halfLength = floor(longestGdtLineLength / 2);
+        std::cout << "\n" << dye::purple(std::string(halfLength + 4, char(61))) << dye::red(printOut) << dye::purple(std::string(halfLength + 4, char(61))) << "\n";
+        for (auto& gdtfile : allGdtFilesArray) {
+            readGDT(gdtfile);
+        }
+        std::cout << dye::purple(std::string(halfLength*2 + printOut.length() + 8, char(61))) << "\n\n";
     }
+
    
+    std::vector<std::string> myModelsArray;
 
     for (auto& model : models) {
         if (customXmodelsMap.contains(model)) {
-            readXmodelBackwards(customXmodelsMap[model]);
+            std::string myString = "model_export/" + customXmodelsMap[model];
+            myModelsArray.push_back(myString);
+            if (maxModelsLength < cod4RootDirectory.length() + myString.length())
+                maxModelsLength = cod4RootDirectory.length() +  myString.length();
         }
     }
 
+    if (myModelsArray.size() > 0) {
+        std::string printOut = " xModel Files ";
+        int halfLength = floor(maxModelsLength / 2);
+        std::cout << "\n" << dye::purple(std::string(halfLength + 2, char(61))) << dye::red(printOut) << dye::purple(std::string(halfLength + 2, char(61))) << "\n";
+        for (auto& xmodel : myModelsArray) {
+            readXmodelBackwards(xmodel);
+        }
+        std::cout << dye::purple(std::string(halfLength * 2  + printOut.length() + 4, char(61))) << "\n\n";
+    }
+
+
     std::vector<std::string> stockTexturesArray;
+    std::map<std::filesystem::path, std::string> readFileMap;
+
     int i = 0;
     while (i != textures.size()) {
         std::string texture = textures[i];
@@ -1063,7 +1142,9 @@ int main()
             //std::cout << "\nFile: " << iwiPath.filename().string() << " doesn't exist...\nThe file is most likely a material.\nLooking for convertcache." << std::endl;
             std::filesystem::path convertCacheMaterialPath(cod4RootDirectory + "convertcache/raw/materials/" + texture);
             if (std::filesystem::exists(convertCacheMaterialPath)) {
-                readFile(convertCacheMaterialPath, texture);
+                readFileMap[convertCacheMaterialPath] = texture;
+                if (longestFileLength < convertCacheMaterialPath.string().length())
+                    longestFileLength = convertCacheMaterialPath.string().length();
             }
             else {
                 std::cout << ">> Texture: {" << texture << "} doesn't exist!\nAdding it to errLog." << std::endl;
@@ -1079,13 +1160,17 @@ int main()
             }
         }
     }
-    /*
-    for (auto& texture : stockTexturesArray) {
-        std::cout << ">> Texture: ((" << texture << ")) is a stock texture!" << std::endl;
-    }
-    */
 
-    std::cout << "\n" << std::endl;
+    if (readFileMap.size() > 0) {
+        std::string printOut = " ConvertCache File ";
+        int halfLength = floor(longestFileLength / 2);
+        std::cout << "\n" << dye::purple(std::string(halfLength, char(61))) << dye::red(printOut) << dye::purple(std::string(halfLength, char(61))) << "\n";
+        for (auto& [convertCacheMatPath, texture] : readFileMap) {
+            readFile(convertCacheMatPath, texture);
+        }
+        std::cout << dye::purple(std::string(halfLength * 2 + printOut.length(), char(61))) << "\n\n";
+    }
+
     std::map<std::string, std::filesystem::path> colSpecNormArray;
 
     for (auto& [kulcs, ertek] : specialCustomTexturesMap) {
@@ -1151,6 +1236,8 @@ int main()
         convertCacheIwiMapReverse[v] = k;
     }
 
+    std::vector<std::filesystem::path> readMoreArray;
+    
     for (auto& [kulcs, ertek] : colSpecNormMap) {
         //std::cout << "SpecOrNormalMap >> Texture: " << kulcs << "\n";
         for (auto& [k,v] : ertek) {
@@ -1169,12 +1256,25 @@ int main()
                     filePath = cod4RootDirectory + "raw/materials/" + convertCacheIwiMapReverse[kulcs];
                 }
                 //std::cout << "FileNameConvertCache: " << filePath.string() << "\n";
-                readMaterialCSV(filePath,true);
+                readMoreArray.push_back(filePath);
+                if (filePath.string().length() > longestReadArrayStringLength)
+                    longestReadArrayStringLength = filePath.string().length();
                 add2OptionalFiles("image",v.string());
                 
             }
         }
     }
+    if (readMoreArray.size() > 0) {
+        std::string printOut = " Materials Not in GDTs ";
+        int halfLength = floor(longestReadArrayStringLength / 2);
+        std::cout << "\n" << dye::purple(std::string(halfLength, char(61))) << dye::red(printOut) << dye::purple(std::string(halfLength, char(61))) << "\n";
+        for (auto& filePath : readMoreArray) {
+            readMaterialCSV(filePath, true);
+        }
+        std::cout << dye::purple(std::string(halfLength * 2 + printOut.length(), char(61))) << "\n\n";
+    }
+
+
 
     std::map<std::string, bool> wasInGDT;
     std::map<std::string, bool> inGdt;
@@ -1195,7 +1295,7 @@ int main()
 
     for (auto& [k, v] : customTexturesMap) {
         if (!inGdt.contains(k)) {
-            std::cout << "File: \n <<" << k << ">> doesn't exist in any GDT files!\n";
+            std::cout << "\n" << dye::red("File: ") << dye::aqua("<<") << dye::aqua(k) << dye::aqua(">>") << "\n" << std::string(6, char(32)) << "doesn't exist in any GDT files!\n";
             std::string myPath = cod4RootDirectory + "raw/materials/" + k;
             readMaterialCSV(myPath, true);
         }
@@ -1264,7 +1364,8 @@ int main()
 
     std::string tab = "          ";
     std::string printLine = "FilePath: ";
-    const int maxLength = allTextureAndGdtFilePathsMaxLength + printLine.length() + 2*tab.length();
+    int printLength = printLine.length() + 4;
+    const int maxLength = allTextureAndGdtFilePathsMaxLength + printLength + 2*tab.length();
     std::string headLine = "  All Files  ";
 
     std::map < std::string, bool > customMap = Map::array2map(customTextures);
@@ -1292,10 +1393,10 @@ int main()
         maxMapSize += k.size();
     }
     std::string sizeString = "  Size:  " + std::to_string(maxMapSize) + std::string(2, spaceChar);
-    std::cout << "\n" << std::string(headLine.length() + 3 + sizeString.length(), borderChar) << "\n"
-        << std::string(1, borderChar) << headLine << std::string(1, borderChar) << sizeString << std::string(1, borderChar) << "\n"
-        << std::string(maxLength+2, borderChar) << "\n"
-        << std::string(1, borderChar) << std::string(maxLength, spaceChar) << std::string(1, borderChar) << "\n";
+    std::cout << "\n" << dye::light_purple(std::string(headLine.length() + 3 + sizeString.length(), borderChar)) << "\n"
+        << dye::light_purple(std::string(1, borderChar)) << dye::red(headLine) << dye::light_purple(std::string(1, borderChar)) << dye::aqua(sizeString) << dye::light_purple(std::string(1, borderChar)) << "\n"
+        << dye::light_purple(std::string(maxLength+2, borderChar)) << "\n"
+        << dye::light_purple(std::string(1, borderChar)) << std::string(maxLength, spaceChar) << dye::light_purple(std::string(1, borderChar)) << "\n";
 
 
     for (auto & [subMap, type]: accumulatedFilesMap) {
@@ -1305,17 +1406,20 @@ int main()
         for (auto& [k, v] : subMap) {
             std::filesystem::path myTemp(k);
             int stringLength;
-            if (!exclusionMaps.contains(type)) stringLength = myTemp.make_preferred().string().length() + printLine.length() + 2 * tab.length();
+            if (!exclusionMaps.contains(type)) stringLength = myTemp.make_preferred().string().length() + printLength + 2 * tab.length();
             else stringLength = myTemp.make_preferred().string().length() + 2 * tab.length();
             std::cout
-                << std::string(1, borderChar)
-                << tab;
-            if(!exclusionMaps.contains(type)) std::cout<< printLine;
+                << dye::light_purple(std::string(1, borderChar))
+                << tab << dye::light_green("[+] ");
+            if (!exclusionMaps.contains(type)) 
+                std::cout << printLine;
+            else
+                stringLength += 4;
             std::cout
                 << myTemp.make_preferred().string()
                 << std::string(maxLength - stringLength, spaceChar)
                 << tab
-                << std::string(1, borderChar) << "\n";
+                << dye::light_purple(std::string(1, borderChar)) << "\n";
 
             if (myTemp.extension().string() == ".gdt") {
                 if (std::filesystem::exists(cod4RootDirectory + "assetsrccache/raw/source_data/" + myTemp.filename().string())) {
@@ -1335,19 +1439,21 @@ int main()
     for (auto& [k, v] : convertcacheIwiMap) {
         if (k.length() > longestCacheFile) longestCacheFile = k.length();
     }
-    std::string firstLine = tab + "Material: " + std::string(longestCacheFile, char(32)) + "Textures: ";
-    std::cout << std::string(1, borderChar) << firstLine << std::string(maxLength - firstLine.length(), char(32))  << std::string(1, borderChar) << "\n";
+    std::string firstLine = tab + "Material: " + std::string(longestCacheFile+4, char(32)) + "Textures: ";
+    std::cout << dye::light_purple(std::string(1, borderChar)) << dye::light_red(firstLine) << std::string(maxLength - firstLine.length(), char(32))  << dye::light_purple(std::string(1, borderChar)) << "\n";
     echoLine(maxLength, borderChar);
     for (auto& [k, v] : convertcacheIwiMap) {
-        std::string myLine = tab + k + std::string(longestCacheFile - k.length(), char(32)) + tab + v;
+        std::string myLine1 = k + std::string(longestCacheFile - k.length(), char(32));
+        std::string myLine2 = v;
         std::cout
-            << std::string(1, borderChar) << myLine
-            << std::string(maxLength - myLine.length(), spaceChar)
-            << std::string(1, borderChar) << "\n";
+            << dye::light_purple(std::string(1, borderChar)) << tab << dye::light_aqua("[+] " ) << myLine1 << tab
+            << dye::light_aqua("[+] ") << myLine2
+            << std::string(maxLength - (myLine1.length() + myLine2.length() + 8 + 2*tab.length()), spaceChar)
+            << dye::light_purple(std::string(1, borderChar)) << "\n";
     }
 
-    std::cout << std::string(1, borderChar) << std::string(maxLength, spaceChar) << std::string(1, borderChar) << "\n"
-        << std::string(maxLength+2, borderChar) << "\n";
+    std::cout << dye::light_purple(std::string(1, borderChar)) << std::string(maxLength, spaceChar) << dye::light_purple(std::string(1, borderChar)) << "\n"
+        << dye::light_purple(std::string(maxLength+2, borderChar)) << "\n";
 
 //####################################################################################################################################################################################
 // 
@@ -1356,7 +1462,7 @@ int main()
                                                                         //Print out all Optional Files it collected//
                                                                         /////////////////////////////////////////////
     if (optionalFilePathsMaxLength == 0) optionalFilePathsMaxLength = 20;
-    const int maxLengthOptional = optionalFilePathsMaxLength + printLine.length() + 2 * tab.length();
+    const int maxLengthOptional = optionalFilePathsMaxLength + printLength + 2 * tab.length();
     std::string headLineOptional = "  All Optional Files  ";
     
     for (auto& [k,v] : textureMapTypeMap) {
@@ -1377,10 +1483,10 @@ int main()
 
 
     std::string sizeStringOptional = "  Size:  " + std::to_string(maxMapOptionalSize) + std::string(2, spaceChar);
-    std::cout << "\n" << std::string(headLineOptional.length() + 3 + sizeStringOptional.length(), borderChar) << "\n"
-        << std::string(1, borderChar) << headLineOptional << std::string(1, borderChar) << sizeStringOptional << std::string(1, borderChar) << "\n"
-        << std::string(maxLengthOptional + 2, borderChar) << "\n"
-        << std::string(1, borderChar) << std::string(maxLengthOptional, spaceChar) << std::string(1, borderChar) << "\n";
+    std::cout << "\n" << dye::light_purple(std::string(headLineOptional.length() + 3 + sizeStringOptional.length(), borderChar)) << "\n"
+        << dye::light_purple(std::string(1, borderChar)) << dye::red(headLineOptional) << dye::light_purple(std::string(1, borderChar)) << dye::aqua(sizeStringOptional) << dye::light_purple(std::string(1, borderChar)) << "\n"
+        << dye::light_purple(std::string(maxLengthOptional + 2, borderChar)) << "\n"
+        << dye::light_purple(std::string(1, borderChar)) << std::string(maxLengthOptional, spaceChar) << dye::light_purple(std::string(1, borderChar)) << "\n";
 
     for (auto& [subMap, type] : accumulatedOptionalFilesMap) {
         if (subMap.size() > 0) {
@@ -1389,18 +1495,18 @@ int main()
             echoLine(maxLengthOptional, borderChar);
             for (auto& [k, v] : subMap) {
                 std::filesystem::path myTemp(k);
-                int stringLength = myTemp.make_preferred().string().length() + printLine.length() + 2 * tab.length();
+                int stringLength = myTemp.make_preferred().string().length() + printLength + 2 * tab.length();
                 std::cout
-                    << std::string(1, borderChar)
-                    << tab
+                    << dye::light_purple(std::string(1, borderChar))
+                    << tab << dye::light_green("[+] ")
                     << printLine
                     << myTemp.make_preferred().string()
                     << std::string(maxLengthOptional - stringLength, spaceChar)
                     << tab
-                    << std::string(1, borderChar);
+                    << dye::light_purple(std::string(1, borderChar));
 
 
-                if (!copyFile(myTemp.string().substr(cod4RootDirectoryLength), true)) std::cout << " FAILED";
+                if (!copyFile(myTemp.string().substr(cod4RootDirectoryLength), true)) std::cout << dye::red(" FAILED");
                 else {
                     std::string model = myTemp.filename().string();
                     if (type == "xmodel") {
@@ -1435,12 +1541,12 @@ int main()
        }
     }
 
-    std::cout << std::string(1, borderChar) << std::string(maxLengthOptional, spaceChar) << std::string(1, borderChar) << "\n"
-        << std::string(maxLengthOptional + 2, borderChar) << "\n";
+    std::cout << dye::light_purple(std::string(1, borderChar)) << std::string(maxLengthOptional, spaceChar) << dye::light_purple(std::string(1, borderChar)) << "\n"
+        << dye::light_purple(std::string(maxLengthOptional + 2, borderChar)) << "\n";
 
     //####################################################################################################################################################################################
 
-    std::cout << "Copying all Optional Files... DONE\n";
+    std::cout << "Copying all Optional Files..." << dye::red(" DONE\n");
 
     std::cout << "Copying Specular Textures...";
     for (int i = 0; i < specularTexturesArray.size(); i++) {
@@ -1448,7 +1554,7 @@ int main()
         copyFile("assettgtcache/raw/raw/images/" + specularTexturesArray[i] + ".iwi");
         copyFile("convertcache/raw/images/" + specularTexturesArray[i]);
     }
-    std::cout << " DONE";
+    std::cout << dye::red(" DONE");
 
     std::cout << "\nCopying Custom Textures...";
     for (int i = 0; i < customTextures.size(); i++) {
@@ -1461,7 +1567,7 @@ int main()
         copyFile("convertcache/raw/images/" + customTextures[i]);
         copyFile("convertcache/raw/materials/" + customTextures[i]);
     }
-    std::cout << " DONE\n";
+    std::cout << dye::red(" DONE\n");
 
     std::cout << "Copying Material Files...";
     for (auto& [k, v] : convertcacheIwiMap) {
@@ -1473,7 +1579,7 @@ int main()
         copyFile("convertcache/raw/materials/" + k);
     }
     //std::cout << "ConvertCache - IWI Pair Size: " << convertcacheIwiMap.size();
-    std::cout << "... DONE\n";
+    std::cout << dye::red("... DONE\n");
 
 
 
@@ -1507,7 +1613,7 @@ int main()
         //std::cout << result;
         //result = "";
     }
-    std::cout << " DONE\n";
+    std::cout << dye::red(" DONE\n");
 
     if (errLog.size() > 0) {
         for (auto& texture : errLog) {

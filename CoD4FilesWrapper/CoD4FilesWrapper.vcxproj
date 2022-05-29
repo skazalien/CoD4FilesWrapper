@@ -143,6 +143,9 @@
   <ItemGroup>
     <ClCompile Include="CoD4FilesWrapper.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="D:\G\Call of Duty 4\Downloads\color.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
